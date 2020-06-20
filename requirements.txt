@@ -1,0 +1,11 @@
+kaggle
+jupyterlab
+sklearn
+torch
+torchvision
+torchaudio
+pytorch-lightning
+matplotlib
+seaborn
+librosa
+numba==0.48
