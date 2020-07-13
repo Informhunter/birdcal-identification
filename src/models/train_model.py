@@ -62,7 +62,7 @@ def main():
     warnings.filterwarnings('ignore')  # Remove annoying torch.nn.Upsample warnings
 
     np.random.seed(123)
-    t.random.seed(123)
+    t.manual_seed(123)
     random.seed(123)
 
     train_dataset, test_dataset = prepare_datasets(
@@ -76,6 +76,9 @@ def main():
     print('Estimating data range')
     max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
     min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
+
+    # max_log = 13.1293
+    # min_log = -9.2103
 
     print('max_log: ', max_log)
     print('min_log: ', min_log)

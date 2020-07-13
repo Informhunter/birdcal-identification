@@ -179,7 +179,7 @@ class SimpleCNN(pl.LightningModule):
             'top_3': top_3,
             'top_5': top_5,
             'predictions': prediction.cpu().numpy(),
-            'expectations': batch['encoded_ebird_codes'],
+            'expectations': batch['encoded_ebird_codes'].cpu().numpy(),
         }
 
     def validation_epoch_end(self, outputs):
@@ -191,13 +191,35 @@ class SimpleCNN(pl.LightningModule):
         predictions = np.concatenate([x['predictions'] for x in outputs])
         expectations = np.concatenate([x['expectations'] for x in outputs])
 
-        roc_auc_macro = roc_auc_score(expectations, predictions, average='macro')
-        roc_auc_micro = roc_auc_score(expectations, predictions, average='micro')
-        roc_auc_samples = roc_auc_score(expectations, predictions, average='samples')
+        try:
+            roc_auc_macro = roc_auc_score(expectations, predictions, average='macro')
+        except ValueError:
+            roc_auc_macro = 0
 
-        avg_pr_macro = average_precision_score(expectations, predictions, average='macro')
-        avg_pr_micro = average_precision_score(expectations, predictions, average='micro')
-        avg_pr_samples = average_precision_score(expectations, predictions, average='samples')
+        try:
+            roc_auc_micro = roc_auc_score(expectations, predictions, average='micro')
+        except ValueError:
+            roc_auc_micro = 0
+
+        try:
+            roc_auc_samples = roc_auc_score(expectations, predictions, average='samples')
+        except ValueError:
+            roc_auc_samples = 0
+
+        try:
+            avg_pr_macro = average_precision_score(expectations, predictions, average='macro')
+        except ValueError:
+            avg_pr_macro = 0
+
+        try:
+            avg_pr_micro = average_precision_score(expectations, predictions, average='micro')
+        except ValueError:
+            avg_pr_micro = 0
+
+        try:
+            avg_pr_samples = average_precision_score(expectations, predictions, average='samples')
+        except ValueError:
+            avg_pr_samples = 0
 
         tensorboard_logs = {
             'val/loss': val_loss_mean,
