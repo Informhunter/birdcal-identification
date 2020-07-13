@@ -47,6 +47,7 @@ class SimpleCNN(pl.LightningModule):
         self.lr = lr
         # self.loss_fn = t.nn.BCEWithLogitsLoss()
         # self.loss_fn = t.nn.CrossEntropyLoss()
+        self.save_hyperparameters()
 
     def forward(self, batch):
         batch_size = len(batch['mel_specs'])

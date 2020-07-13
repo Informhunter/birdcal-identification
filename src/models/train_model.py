@@ -62,10 +62,8 @@ def main():
     print('Created datasets')
 
     print('Estimating data range')
-    # max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
-    # min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
-    max_log = 13.1293
-    min_log = -9.2103
+    max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
+    min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
 
     print('max_log: ', max_log)
     print('min_log: ', min_log)
