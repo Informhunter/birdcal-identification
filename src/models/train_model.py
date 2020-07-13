@@ -1,4 +1,6 @@
 import click
+import random
+import numpy as np
 import pandas as pd
 import torch as t
 import pytorch_lightning as pl
@@ -13,11 +15,16 @@ from torchvision.transforms import Compose, RandomApply
 from sklearn.model_selection import train_test_split
 
 
-def prepare_datasets(meta_path, mels_dir):
+def prepare_datasets(meta_path, mels_dir, random_state=123):
     df = pd.read_csv(meta_path)
     df = df[df['filename'] != 'XC313679.mp3']
     df = df[df['duration'] < 125]
-    train_df, test_df = train_test_split(df, test_size=0.2, stratify=df['ebird_code'])
+    train_df, test_df = train_test_split(
+        df,
+        test_size=0.2,
+        stratify=df['ebird_code'],
+        random_state=random_state
+    )
     train_mixup_dataset = BirdMelTrainDataset(
         train_df,
         mels_dir,
@@ -54,9 +61,14 @@ def main():
 
     warnings.filterwarnings('ignore')  # Remove annoying torch.nn.Upsample warnings
 
+    np.random.seed(123)
+    t.random.seed(123)
+    random.seed(123)
+
     train_dataset, test_dataset = prepare_datasets(
         './data/raw/birdsong-recognition/train.csv',
-        './data/processed/mel_specs_train/'
+        './data/processed/mel_specs_train/',
+        123
     )
 
     print('Created datasets')
@@ -90,6 +102,7 @@ def main():
 
     trainer = pl.Trainer(
         # fast_dev_run=True,
+        deterministic=True,
         gpus=1,
         accumulate_grad_batches=4,
         row_log_interval=64,
