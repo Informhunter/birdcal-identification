@@ -2,10 +2,11 @@
 Simple CNN on mel spectrograms with global avg/max pooling.
 Trains on full audio length.
 '''
+import numpy as np
 import torch as t
 import pytorch_lightning as pl
-import numpy as np
 from itertools import chain
+from sklearn.metrics import roc_auc_score, average_precision_score
 from src.data.dataset import EBIRD_CODE_TO_INDEX
 
 
@@ -31,13 +32,21 @@ class SimpleCNN(pl.LightningModule):
         self.conv_4 = t.nn.Conv2d(128, 128, (3, 3))
         self.bn_4 = t.nn.BatchNorm2d(128)
 
+        # self.conv_a = t.nn.Conv1d(1, 8, 5, padding=1)
+        # self.conv_b = t.nn.Conv1d(1, 8, 5)
+        self.linear_y = t.nn.Linear(128, 128)
+
         self.dropout = t.nn.Dropout(0.5)
-        self.linear = t.nn.Linear(2816, n_classes)
+        self.linear = t.nn.Linear(2816 + 128 * 2, n_classes)
+        # self.linear_1 = t.nn.Linear(2816 + 128 * 2, 1024)
+        # self.linear_2 = t.nn.Linear(1024, n_classes)
 
         self.n_mels = n_mels
         self.segment_size = segment_size
         self.n_classes = n_classes
         self.lr = lr
+        # self.loss_fn = t.nn.BCEWithLogitsLoss()
+        # self.loss_fn = t.nn.CrossEntropyLoss()
 
     def forward(self, batch):
         batch_size = len(batch['mel_specs'])
@@ -51,6 +60,7 @@ class SimpleCNN(pl.LightningModule):
             .transpose(-2, -1)
         )
 
+        # Mel features
         x = self.conv_1(mel_specs)
         x = self.bn_1(x)
         x = self.maxpool_1(x)
@@ -72,21 +82,50 @@ class SimpleCNN(pl.LightningModule):
         x = x.view(batch_size, n_segments, -1)
         x = self.dropout(x)
 
+        # Frequency features
+        y = t.sum(mel_specs.view(batch_size, n_segments, self.n_mels, -1), dim=-1)
+        # print('y.shape beginning: ', y.shape)
+        y_max, _ = t.max(y, dim=-1)
+        y_min, _ = t.min(y, dim=-1)
+        y_max = y_max.unsqueeze(-1)
+        y_min = y_min.unsqueeze(-1)
+
+        # print('y_max.shape: ', y_max.shape)
+        # print('y_min.shape: ', y_min.shape)
+
+        y = (y - y_min) / (y_max - y_min + 0.0001)
+        y = self.linear_y(y)
+
+        # print('y.shape after linear: ', y.shape)
+
         # Global avg/max pooling
         segment_lengths = batch['segment_lengths'].view(-1, 1)
 
         for i in range(x.size(0)):
             x[i, int(segment_lengths[i].item()):, :] = 0
+            y[i, int(segment_lengths[i].item()):, :] = 0
 
         x1 = t.sum(x, dim=1)
         x1 = x1 / segment_lengths
         x2, _ = t.max(x, dim=1)
 
-        x = t.cat((x1, x2), dim=-1)
+        y1 = t.sum(y, dim=1)
+        y1 = y1 / segment_lengths
+        y2, _ = t.max(y, dim=1)
 
-        x = self.linear(x)
+        # print('y1.shape: ', y1.shape)
+        # print('y2.shape: ', y2.shape)
 
-        return x
+        z = t.cat((x1, x2, y1, y2), dim=-1)
+
+        z = self.linear(z)
+
+        # z = self.linear_1(z)
+        # z = t.relu(z)
+        # z = self.dropout(z)
+        # z = self.linear_2(z)
+
+        return z
 
     def training_step(self, batch, batch_idx):
         prediction = self(batch)
@@ -94,6 +133,10 @@ class SimpleCNN(pl.LightningModule):
             prediction,
             batch['encoded_ebird_codes']
         )
+        # loss = t.nn.functional.cross_entropy(
+        #     prediction,
+        #     t.argmax(batch['encoded_ebird_codes'], dim=-1)
+        # )
         tensorboard_logs = {'train/loss': loss.item()}
         return {'loss': loss, 'log': tensorboard_logs}
 
@@ -103,6 +146,10 @@ class SimpleCNN(pl.LightningModule):
             prediction,
             batch['encoded_ebird_codes']
         )
+        # loss = t.nn.functional.cross_entropy(
+        #     prediction,
+        #     t.argmax(batch['encoded_ebird_codes'], dim=-1)
+        # )
         predicted_ranking = t.argsort(prediction, dim=1, descending=True)
         expected_indices = [EBIRD_CODE_TO_INDEX[x] for x in batch['primary_ebird_codes']]
 
@@ -125,25 +172,57 @@ class SimpleCNN(pl.LightningModule):
                 top_5.append(1)
             else:
                 top_5.append(0)
-        return {'val_loss': loss, 'top_1': top_1, 'top_3': top_3, 'top_5': top_5}
+        return {
+            'val_loss': loss,
+            'top_1': top_1,
+            'top_3': top_3,
+            'top_5': top_5,
+            'predictions': prediction.cpu().numpy(),
+            'expectations': batch['encoded_ebird_codes'],
+        }
 
     def validation_epoch_end(self, outputs):
         val_loss_mean = t.stack([x['val_loss'] for x in outputs]).mean()
         top_1 = t.mean(t.FloatTensor(list(chain(*[x['top_1'] for x in outputs]))))
         top_3 = t.mean(t.FloatTensor(list(chain(*[x['top_3'] for x in outputs]))))
         top_5 = t.mean(t.FloatTensor(list(chain(*[x['top_5'] for x in outputs]))))
+
+        predictions = np.concatenate([x['predictions'] for x in outputs])
+        expectations = np.concatenate([x['expectations'] for x in outputs])
+
+        roc_auc_macro = roc_auc_score(expectations, predictions, average='macro')
+        roc_auc_micro = roc_auc_score(expectations, predictions, average='micro')
+        roc_auc_samples = roc_auc_score(expectations, predictions, average='samples')
+
+        avg_pr_macro = average_precision_score(expectations, predictions, average='macro')
+        avg_pr_micro = average_precision_score(expectations, predictions, average='micro')
+        avg_pr_samples = average_precision_score(expectations, predictions, average='samples')
+
         tensorboard_logs = {
             'val/loss': val_loss_mean,
             'val/top_1': top_1,
             'val/top_3': top_3,
-            'val/top_5': top_5
+            'val/top_5': top_5,
+            'val/roc_auc_macro': roc_auc_macro,
+            'val/roc_auc_micro': roc_auc_micro,
+            'val/roc_auc_samples': roc_auc_samples,
+            'val/avg_pr_macro': avg_pr_macro,
+            'val/avg_pr_micro':  avg_pr_micro,
+            'val/avg_pr_samples': avg_pr_samples,
         }
+
         return {
             'val_loss': val_loss_mean,
             'top_1': top_1,
             'top_3': top_3,
             'top_5': top_5,
-            'log': tensorboard_logs
+            'val/roc_auc_macro': roc_auc_macro,
+            'val/roc_auc_micro': roc_auc_micro,
+            'val/roc_auc_samples': roc_auc_samples,
+            'val/avg_pr_macro': avg_pr_macro,
+            'val/avg_pr_micro':  avg_pr_micro,
+            'val/avg_pr_samples': avg_pr_samples,
+            'log': tensorboard_logs,
         }
 
     def configure_optimizers(self):

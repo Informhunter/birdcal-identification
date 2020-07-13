@@ -370,10 +370,7 @@ class BirdMelTrainDataset(Dataset):
             secondary_label_indices = t.LongTensor(secondary_label_indices)
             encoded_ebird_codes.scatter_(0, secondary_label_indices, 1)
 
-        if self.transform is not None:
-            mel_spec = self.transform(mel_spec)
-
-        return {
+        sample = {
             'mel_spec': mel_spec,
             'primary_ebird_code': primary_ebird_code,
             'secondary_ebird_codes': secondary_ebird_codes,
@@ -384,6 +381,11 @@ class BirdMelTrainDataset(Dataset):
             'filepath': filepath,
             'rating': rating,
         }
+
+        if self.transform is not None:
+            sample = self.transform(sample)
+
+        return sample
 
 
 class BirdMelTestDataset(Dataset):

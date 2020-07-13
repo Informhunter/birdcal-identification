@@ -19,21 +19,21 @@ class RandomCrop:
 
 
 class RandomTimeResize:
-    '''Aplly random resize along time dimention to spectrogram.'''
+    '''Apply random resize along time dimention to spectrogram.'''
     def __init__(self, resize_range=0.2, resize_mode='billinear'):
         self.resize_range = resize_range
         self.resize_mode = resize_mode
 
     def __call__(self, spec):
         scale_factor = 1 + (np.random.random_sample() - 0.5) * self.resize_range
-        mel_spec = nn.Upsample(
+        new_spec = nn.Upsample(
             scale_factor=(1, scale_factor),
             mode=self.resize_mode,
             align_corners=False
         )(
             spec.unsqueeze(0).unsqueeze(0)
         ).squeeze(0).squeeze(0)
-        return mel_spec
+        return new_spec
 
 
 class RandomTimeShift:
@@ -47,9 +47,7 @@ class RandomTimeShift:
         shift = int(np.random.random_sample() * duration * self.shift_range) + 1
         new_spec[:, :shift] = spec[:, -shift:]
         new_spec[:, shift:] = spec[:, :-shift]
-        spec = new_spec
-
-        return spec
+        return new_spec
 
 
 class WaveformRandomTimeResize:
@@ -83,3 +81,54 @@ class WaveformRandomTimeShift:
         new_waveform[shift:] = waveform[:-shift]
 
         return new_waveform
+
+
+class SpecMixup:
+    '''
+    Mixup spectrogram of a sample with a spectrogram of a random sample from the mixup dataset.
+    The smallest spectrogram is repeated until both spectograms are of the same size.
+    '''
+    def __init__(self, mixup_sample_dataset, alpha=0.5, mixup_labels=True):
+        self.mixup_sample_dataset = mixup_sample_dataset
+        self.alpha = alpha
+        self.mixup_labels = mixup_labels
+
+    def __call__(self, sample):
+        i = np.random.randint(0, len(self.mixup_sample_dataset))
+        mixup_sample = self.mixup_sample_dataset[i]
+
+        sample_spec = sample['mel_spec']
+        mixup_sample_spec = mixup_sample['mel_spec']
+
+        sample_len = sample_spec.size(1)
+        mixup_sample_len = mixup_sample_spec.size(1)
+
+        if sample_len > mixup_sample_len:
+            k = int(np.ceil(sample_len / mixup_sample_len))
+            mixup_sample_spec = mixup_sample_spec.repeat(1, k)[:, :sample_len]
+        elif mixup_sample_len > sample_len:
+            k = int(np.ceil(mixup_sample_len / sample_len))
+            sample_spec = sample_spec.repeat(1, k)[:, :mixup_sample_len]
+
+        result_spec = sample_spec * (1 - self.alpha) + mixup_sample_spec * self.alpha
+
+        if self.mixup_labels:
+            result_encoded_ebird_codes = (
+                (sample['encoded_ebird_codes'] == 1.) | (mixup_sample['encoded_ebird_codes'] == 1.)
+            ).float()
+        else:
+            result_encoded_ebird_codes = sample['encoded_ebird_codes']
+
+        sample['encoded_ebird_codes'] = result_encoded_ebird_codes
+        sample['mel_spec'] = result_spec
+
+        return sample
+
+
+class SpecTransform:
+    def __init__(self, transform):
+        self.transform = transform
+
+    def __call__(self, sample):
+        sample['mel_spec'] = self.transform(sample['mel_spec'])
+        return sample

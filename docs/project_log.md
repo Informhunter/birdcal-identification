@@ -166,6 +166,23 @@ Global plans are:
 - Implement tunnable suit for the first model and get parameter optimization running non-stop.
 
 
+## 12.07.2020
+
+Should really implement a random crop training: if it is possible to train an architecture
+similar to mine to a similar quality, probably should ditch the complication of padding
+and splitting into segments.
+
+More ideas:
+- Train a model to identify call/nocall and only then use the classifier model to predict
+- Build a histogram of how energy is distributed across freqencies, apply a small 1D CNN on
+top to get good features and use as an additional feature branch in the main network.
+- Try different loss (with softmax, instead of bunch of sigmoids)
+
+Now trying cross entropy training. Seams fine so far, though doesn't converge as fast.
+Could be happening because the learnin rate is too low.
+What is good, the validation loss seems to behave better than with binary cross entropy
+i.e. doesn't go up and down all the time. I wonder why multilabel classification loss
+ends up growing so much. Maybe try 2 linear layers to get more stable loss :/
 
 
 
