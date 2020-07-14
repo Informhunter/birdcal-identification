@@ -18,7 +18,7 @@ from sklearn.model_selection import train_test_split
 def prepare_datasets(meta_path, mels_dir, random_state=123):
     df = pd.read_csv(meta_path)
     df = df[df['filename'] != 'XC313679.mp3']
-    df = df[df['duration'] < 125]
+    df = df[df['duration'] < 245]
     train_df, test_df = train_test_split(
         df,
         test_size=0.2,
