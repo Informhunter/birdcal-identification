@@ -184,6 +184,13 @@ What is good, the validation loss seems to behave better than with binary cross 
 i.e. doesn't go up and down all the time. I wonder why multilabel classification loss
 ends up growing so much. Maybe try 2 linear layers to get more stable loss :/
 
+## 14.07.2020
+
+Need to start utilizing the whole dataset: after I start doing that I can focus on models.
+It is just important to be able to feed any data to any model and be sure that I will not
+run out of memory. So probably split longer recorings into pieces of less than 1 minute.
+With my simple model 240 second recordings already make it impossible to train.
+
 
 
 

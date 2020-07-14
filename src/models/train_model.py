@@ -18,7 +18,7 @@ from sklearn.model_selection import train_test_split
 def prepare_datasets(meta_path, mels_dir, random_state=123):
     df = pd.read_csv(meta_path)
     df = df[df['filename'] != 'XC313679.mp3']
-    df = df[df['duration'] < 245]
+    df = df[df['duration'] < 125]
     train_df, test_df = train_test_split(
         df,
         test_size=0.2,
@@ -74,11 +74,11 @@ def main():
     print('Created datasets')
 
     print('Estimating data range')
-    max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
-    min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
+    # max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
+    # min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
 
-    # max_log = 13.1293
-    # min_log = -9.2103
+    max_log = 13.1293
+    min_log = -9.2103
 
     print('max_log: ', max_log)
     print('min_log: ', min_log)
