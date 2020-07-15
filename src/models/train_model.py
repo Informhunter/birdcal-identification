@@ -19,7 +19,7 @@ def prepare_datasets(meta_path, mels_dir, random_state=123):
     df = pd.read_csv(meta_path)
 
     group_ids = df['group_id'].unique()
-    group_ebird_codes = [df[df['group_id'] == x].loc[0, 'ebird_code'] for x in group_ids]
+    group_ebird_codes = [df[df['group_id'] == x].iloc[0]['ebird_code'] for x in group_ids]
     train_group_ids, test_group_ids = train_test_split(
         group_ids,
         test_size=0.2,
