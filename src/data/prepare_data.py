@@ -12,6 +12,7 @@ import os
 import click
 import torch as t
 import torchaudio as toa
+import pandas as pd
 from pathlib import Path
 from joblib import Parallel, delayed
 
@@ -44,7 +45,7 @@ def split_waveform(waveform, sampling_rate=44100, max_duration=60):
 
 
 def create_mel_spec(waveform, sampling_rate, n_fft, n_mels, hop_length):
-    mel_transform = toa.transforms.MelScale(
+    mel_transform = toa.transforms.MelSpectrogram(
         sample_rate=sampling_rate,
         n_fft=n_fft,
         n_mels=n_mels,
@@ -62,9 +63,14 @@ def process_file(f_path, output_dir, target_sampling_rate, max_duration,
         print(f'Failed to load: {f_path}')
         return
 
+    waveform = waveform[0]
+
     waveform = resample_waveform(waveform, old_sampling_rate, target_sampling_rate)
     waveforms = split_waveform(waveform, target_sampling_rate, max_duration)
-    mel_specs = [create_mel_spec(x, n_fft, n_mels, hop_length) for x in waveforms]
+    mel_specs = [
+        create_mel_spec(x, target_sampling_rate, n_fft, n_mels, hop_length)
+        for x in waveforms
+    ]
 
     f_name = os.path.basename(f_path)
     new_f_name = os.path.splitext(f_name)[0]
@@ -78,6 +84,7 @@ def process_file(f_path, output_dir, target_sampling_rate, max_duration,
 
 
 @click.command()
+@click.argument('train_csv_path', type=click.Path())
 @click.argument('input_dir', type=click.Path())
 @click.argument('output_dir', type=click.Path())
 @click.option('--target_sampling_rate', default=44100)
@@ -86,7 +93,7 @@ def process_file(f_path, output_dir, target_sampling_rate, max_duration,
 @click.option('--n_mels', default=128)
 @click.option('--hop_length', default=512)
 @click.option('--n_jobs', default=28)
-def main(input_dir, output_dir, target_sampling_rate,
+def main(train_csv_path, input_dir, output_dir, target_sampling_rate,
          max_duration, n_fft, n_mels, hop_length, n_jobs):
     f_paths = Path(input_dir).rglob('*.mp3')
     Parallel(n_jobs=n_jobs, verbose=10)(
@@ -96,6 +103,24 @@ def main(input_dir, output_dir, target_sampling_rate,
         )
         for f_path in f_paths
     )
+    train_df = pd.read_csv(train_csv_path)
+    new_train_df = []
+    for group_id, item in enumerate(train_df.to_dict(orient='records')):
+
+        filename = os.path.splitext(item['filename'])[0]
+        path = os.path.join(
+            output_dir,
+            item['ebird_code']
+        )
+        f_paths = Path(path).glob(f'{filename}_part_*.pt')
+        for f_path in f_paths:
+            new_filename = os.path.basename(f_path)
+            new_item = item.copy()
+            new_item['filename'] = new_filename
+            new_item['group_id'] = group_id
+            new_train_df.append(new_item)
+    new_train_df = pd.DataFrame(new_train_df)
+    new_train_df.to_csv(os.path.join(output_dir, 'train.csv'))
 
 
 if __name__ == '__main__':

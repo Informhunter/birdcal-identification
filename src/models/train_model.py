@@ -17,14 +17,21 @@ from sklearn.model_selection import train_test_split
 
 def prepare_datasets(meta_path, mels_dir, random_state=123):
     df = pd.read_csv(meta_path)
-    df = df[df['filename'] != 'XC313679.mp3']
-    df = df[df['duration'] < 125]
-    train_df, test_df = train_test_split(
-        df,
+
+    group_ids = df['group_id'].unique()
+    group_ebird_codes = [df[df['group_id'] == x].loc[0, 'ebird_code'] for x in group_ids]
+    train_group_ids, test_group_ids = train_test_split(
+        group_ids,
         test_size=0.2,
-        stratify=df['ebird_code'],
+        stratify=group_ebird_codes,
         random_state=random_state
     )
+    train_group_ids = set(train_group_ids)
+    test_group_ids = set(test_group_ids)
+
+    train_df = df[df['group_id'].isin(train_group_ids)]
+    test_df = df[df['group_id'].isin(test_group_ids)]
+
     train_mixup_dataset = BirdMelTrainDataset(
         train_df,
         mels_dir,
@@ -66,8 +73,8 @@ def main():
     random.seed(123)
 
     train_dataset, test_dataset = prepare_datasets(
-        './data/raw/birdsong-recognition/train.csv',
-        './data/processed/mel_specs_train/',
+        './data/processed/prepared_data/train.csv',
+        './data/processed/prepared_data',
         123
     )
 
