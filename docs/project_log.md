@@ -189,9 +189,24 @@ ends up growing so much. Maybe try 2 linear layers to get more stable loss :/
 Need to start utilizing the whole dataset: after I start doing that I can focus on models.
 It is just important to be able to feed any data to any model and be sure that I will not
 run out of memory. So probably split longer recorings into pieces of less than 1 minute.
-With my simple model 240 second recordings already make it impossible to train.
+With my simple model 240 second recordings already make it impossible to train. And even
+180 seconds is already too much.
+
+Split each recoring into (duration // 60 + 1) pieces, create alternative train.csv with
+information on which clip is part of which original recording.
+
+## 15.07.2020
+
+Ideas:
+- Use a trained model (CV-style) to identify pieces with birds singing and add those pieces
+to training to get more examples of shorter length with more concentrated labels.
+- Based on longer samples for each bird build a model of "periodicity" of bird singing:
+some birds to a call every 2 seconds, some every 5, etc. Can allow to do better guesses on
+call-nocall when looking at whole recordeing.
+- Before predicting piece-wise, use the model to predict which birds call in the whole
+recording and use that information as a prior for piece predictions.
 
 
-
+Now finishing the final script for preparing data: resample -> split -> mel transform
 
 

@@ -17,8 +17,8 @@ def process_file(f_path, resample_rate, output_dir):
 
     with t.no_grad():
         resample_transform = toa.transforms.Resample(
-                old_sampling_rate,
-                resample_rate
+            old_sampling_rate,
+            resample_rate
         )
         waveform = resample_transform(waveform)
 
