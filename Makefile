@@ -17,10 +17,10 @@ prepare_data: TRAIN_CSV_PATH=./data/raw/birdsong-recognition/train.csv
 prepare_data: INPUT_DIR=./data/raw/birdsong-recognition/train_audio
 prepare_data: OUTPUT_DIR=./data/processed/prepared_data
 prepare_data: TARGET_SAMPLING_RATE=44100
-prepare_data: MAX_DURATION=60
+prepare_data: MAX_DURATION=65
 prepare_data: N_MELS=128
 prepare_data: N_FFT=2048
-prepare_data: HOP_LENGTH=2048
+prepare_data: HOP_LENGTH=512
 prepare_data: N_JOBS=28
 prepare_data:
 	$(PYTHON) ./src/data/prepare_data.py $(TRAIN_CSV_PATH) $(INPUT_DIR) $(OUTPUT_DIR)\

@@ -210,3 +210,15 @@ recording and use that information as a prior for piece predictions.
 Now finishing the final script for preparing data: resample -> split -> mel transform
 
 
+## 16.07.2020
+
+Apparently I made a mistake in data preparation script parameters and created specs
+with hop_length=2048. Have recreated them with hop_length=512 and will try again.
+Tried to do call/nocall detection using a trained model, but it didn't look promissing.
+I hope it's due to spectrograms having low resolution.
+
+Need to note that network with more filters was doing quite well on the whole dataset
+processed with hop_length=2048
+
+Might consider tweaking parameters and building and enseble of models trained with
+different hop length (and overall different spec parameters).

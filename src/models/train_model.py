@@ -37,7 +37,7 @@ def prepare_datasets(meta_path, mels_dir, random_state=123):
         mels_dir,
         True,
         Compose([
-            RandomApply([SpecTransform(RandomTimeShift(1.0))], 0.8),
+            SpecTransform(RandomTimeShift(1.0)),
             RandomApply([SpecTransform(RandomTimeResize(resize_mode='bilinear'))], 0.5),
         ])
     )
@@ -46,8 +46,8 @@ def prepare_datasets(meta_path, mels_dir, random_state=123):
         mels_dir,
         True,
         Compose([
-            RandomApply([SpecMixup(train_mixup_dataset, 0.5, True)], 0.3),
-            RandomApply([SpecTransform(RandomTimeShift(1.0))], 0.8),
+            RandomApply([SpecMixup(train_mixup_dataset, 0.5, True)], 0.5),
+            SpecTransform(RandomTimeShift(1.0)),
             RandomApply([SpecTransform(RandomTimeResize(resize_mode='bilinear'))], 0.5),
             SpecTransform(TimeMasking(10)),
             SpecTransform(FrequencyMasking(8)),
@@ -81,16 +81,16 @@ def main():
     print('Created datasets')
 
     print('Estimating data range')
-    max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
-    min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
+    # max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
+    # min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
 
-    # max_log = 13.1293
-    # min_log = -9.2103
+    max_log = 13.1293
+    min_log = -9.2103
 
     print('max_log: ', max_log)
     print('min_log: ', min_log)
 
-    collate = Collate(400, min_log, max_log)
+    collate = Collate(256, min_log, max_log)
 
     train_dataloader = t.utils.data.DataLoader(
         train_dataset,
@@ -108,15 +108,15 @@ def main():
         num_workers=8
     )
 
-    model = SimpleCNN(264, 128, 400, 2e-4)
+    model = SimpleCNN(264, 128, 256, 8e-5)
 
     trainer = pl.Trainer(
-        # fast_dev_run=True,
+        fast_dev_run=True,
         deterministic=True,
         gpus=1,
         accumulate_grad_batches=4,
         row_log_interval=64,
-        auto_lr_find=True,
+        auto_lr_find=False,
         callbacks=[pl.callbacks.LearningRateLogger()],
         early_stop_callback=pl.callbacks.EarlyStopping(
             monitor='top_1',

@@ -30,7 +30,7 @@ def split_waveform(waveform, sampling_rate=44100, max_duration=60):
     assert len(waveform.size()) == 1  # No channels
     max_duration_n = sampling_rate * max_duration
     duration_n = waveform.size(0)
-    if duration_n <= max_duration:
+    if duration_n <= max_duration_n:
         waveforms = [waveform]
     else:
         k = duration_n // max_duration_n + 1

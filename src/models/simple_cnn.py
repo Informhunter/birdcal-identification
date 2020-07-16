@@ -37,7 +37,7 @@ class SimpleCNN(pl.LightningModule):
         self.linear_y = t.nn.Linear(128, 128)
 
         self.dropout = t.nn.Dropout(0.5)
-        self.linear = t.nn.Linear(2816 + 128 * 2, n_classes)
+        self.linear = t.nn.Linear(1792, n_classes)
         # self.linear_1 = t.nn.Linear(2816 + 128 * 2, 1024)
         # self.linear_2 = t.nn.Linear(1024, n_classes)
 
