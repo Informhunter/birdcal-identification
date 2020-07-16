@@ -81,11 +81,11 @@ def main():
     print('Created datasets')
 
     print('Estimating data range')
-    # max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
-    # min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
+    max_log = max([t.log(t.max(x['mel_spec']) + 0.0001) for x in train_dataset])
+    min_log = min([t.log(t.min(x['mel_spec']) + 0.0001) for x in train_dataset])
 
-    max_log = 13.1293
-    min_log = -9.2103
+    # max_log = 13.1293
+    # min_log = -9.2103
 
     print('max_log: ', max_log)
     print('min_log: ', min_log)
@@ -111,7 +111,7 @@ def main():
     model = SimpleCNN(264, 128, 256, 8e-5)
 
     trainer = pl.Trainer(
-        fast_dev_run=True,
+        # fast_dev_run=True,
         deterministic=True,
         gpus=1,
         accumulate_grad_batches=4,
