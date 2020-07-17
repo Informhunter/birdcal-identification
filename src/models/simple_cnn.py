@@ -270,7 +270,7 @@ class SimpleCNN(pl.LightningModule):
         )
         return [optimizer], [{
             'scheduler': scheduler,
-            'interval': 'step',
+            'interval': 'epoch',
         }]
 
 
