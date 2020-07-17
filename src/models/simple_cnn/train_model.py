@@ -6,7 +6,7 @@ import torch as t
 import pytorch_lightning as pl
 import warnings
 
-from src.models.simple_cnn import SimpleCNN, Collate
+from src.models.simple_cnn.model import SimpleCNN, Collate
 from src.data.dataset import BirdMelTrainDataset
 from src.data.transforms import RandomTimeShift, RandomTimeResize, SpecMixup, SpecTransform
 from torchaudio.transforms import TimeMasking, FrequencyMasking
