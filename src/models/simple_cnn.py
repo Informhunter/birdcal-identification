@@ -17,27 +17,29 @@ class SimpleCNN(pl.LightningModule):
     '''
     def __init__(self, n_classes, n_mels, segment_size, lr=0.001):
         super().__init__()
-        self.conv_1 = t.nn.Conv2d(1, 64, (5, 5))
+        self.conv_1 = t.nn.Conv2d(1, 64, (5, 5), padding=(2, 2))
         self.bn_1 = t.nn.BatchNorm2d(64)
-        self.maxpool_1 = t.nn.MaxPool2d((3, 3))
+        self.maxpool_1 = t.nn.MaxPool2d((4, 3))
 
-        self.conv_2 = t.nn.Conv2d(64, 64, (5, 5))
-        self.bn_2 = t.nn.BatchNorm2d(64)
-        self.maxpool_2 = t.nn.MaxPool2d((3, 3))
+        self.conv_2 = t.nn.Conv2d(64, 128, (5, 5), padding=(2, 2))
+        self.bn_2 = t.nn.BatchNorm2d(128)
+        self.maxpool_2 = t.nn.MaxPool2d((4, 3))
 
-        self.conv_3 = t.nn.Conv2d(64, 128, (3, 3))
-        self.bn_3 = t.nn.BatchNorm2d(128)
-        self.maxpool_3 = t.nn.MaxPool2d((3, 3))
+        self.conv_3 = t.nn.Conv2d(128, 256, (3, 3), padding=(1, 1))
+        self.bn_3 = t.nn.BatchNorm2d(256)
+        self.maxpool_3 = t.nn.MaxPool2d((4, 3))
 
-        self.conv_4 = t.nn.Conv2d(128, 128, (3, 3))
-        self.bn_4 = t.nn.BatchNorm2d(128)
+        self.conv_4 = t.nn.Conv2d(256, 512, (3, 3), padding=(1, 1))
+        self.maxpool_4 = t.nn.MaxPool2d((2, 3))
+        self.bn_4 = t.nn.BatchNorm2d(512)
 
         # self.conv_a = t.nn.Conv1d(1, 8, 5, padding=1)
         # self.conv_b = t.nn.Conv1d(1, 8, 5)
         self.linear_y = t.nn.Linear(128, 128)
 
         self.dropout = t.nn.Dropout(0.5)
-        self.linear = t.nn.Linear(1792, n_classes)
+        # self.linear = t.nn.Linear(2816 + 128 * 2, n_classes)
+        self.linear = t.nn.Linear(3328, n_classes)
         # self.linear_1 = t.nn.Linear(2816 + 128 * 2, 1024)
         # self.linear_2 = t.nn.Linear(1024, n_classes)
 
@@ -79,6 +81,7 @@ class SimpleCNN(pl.LightningModule):
 
         x = self.conv_4(x)
         x = self.bn_4(x)
+        x = self.maxpool_4(x)
 
         x = x.view(batch_size, n_segments, -1)
         x = self.dropout(x)
@@ -250,12 +253,20 @@ class SimpleCNN(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = t.optim.Adam(self.parameters(), lr=self.lr)
-        scheduler = t.optim.lr_scheduler.CyclicLR(
+        # scheduler = t.optim.lr_scheduler.CyclicLR(
+        #     optimizer,
+        #     self.lr / 4,
+        #     self.lr * 2,
+        #     step_size_up=500,
+        #     cycle_momentum=False
+        # )
+        scheduler = t.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
-            self.lr / 4,
-            self.lr * 2,
-            step_size_up=500,
-            cycle_momentum=False
+            mode='min',
+            factor=0.1,
+            patience=4,
+            threshold=0.0001,
+            min_lr=1e-8,
         )
         return [optimizer], [{
             'scheduler': scheduler,

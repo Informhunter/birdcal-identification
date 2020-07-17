@@ -119,16 +119,16 @@ def main():
         auto_lr_find=False,
         callbacks=[pl.callbacks.LearningRateLogger()],
         early_stop_callback=pl.callbacks.EarlyStopping(
-            monitor='top_1',
-            min_delta=0.005,
-            patience=5,
-            mode='max'
+            monitor='val_loss',
+            min_delta=0.0001,
+            patience=6,
+            mode='min'
         ),
         checkpoint_callback=pl.callbacks.ModelCheckpoint(
-            monitor='top_1',
+            monitor='val_loss',
             save_last=True,
             save_top_k=3,
-            mode='max'
+            mode='min'
         )
     )
 
